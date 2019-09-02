@@ -19,7 +19,7 @@ class InfluxPoller(threading.Thread):
             except Exception as e:
                 print("Error in polling:",e)
                 print(traceback.format_exc())
-            time.sleep(30)
+            time.sleep(1800)
 
 def generateMessage(gpuUsage, appUsage):
     gpuLogs = OrderedDict(sorted([(k, v) for k, v in gpuUsage.items()], key= lambda x: x[0]))
