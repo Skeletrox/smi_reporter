@@ -111,5 +111,5 @@ while True:
     except Exception as e:
         print("Error in parsing:",e)
         print(traceback.format_exc())
-    time.sleep(1800)
+    time.sleep(180)
 

@@ -7,6 +7,7 @@ from influxdb import DataFrameClient
 from collections import OrderedDict
 import datetime
 import pickle
+import matplotlib.pyplot as plt
 
 class InfluxPoller(threading.Thread):
     def __init__(self):
@@ -26,7 +27,7 @@ def generateMessage(gpuUsage, appUsage):
 
     texts = []
     for (key, val) in gpuLogs.items():
-        currentString = "Alert! At {}, GPU usage was {}% and {} MiB".format(key, val["proc"], val["mem"])
+        currentString = "Alert! At {}, GPU usage was {}% and GPU Memory usage was {}%\n".format(key, val["proc"], val["mem"])
         texts.append(currentString)
 
     texts.append("\n-------\nApp Logs\n--------\n")
@@ -46,6 +47,7 @@ def pollInflux():
     configData = None
     with open("./config.json") as config:
         configData = json.loads(config.read())
+        
     host = configData["host"]
     port = configData["port"]
     database = configData["database"]
@@ -88,3 +90,14 @@ def updateUser(message, deviceID):
     bot = botAndUpdate["bot"]
     update = botAndUpdate["update"]
     bot.sendMessage(chat_id=chatID, text=message)
+
+
+def pollForGraphs(timerange, deviceID):
+    client = DataFrameClient(host=host, port=port, database=database)
+    query = "SELECT gpu_perc, mem_perc FROM gpu_reports WHERE deviceid='{}' AND time > now() - {}".format(deviceID, timerange)
+    results = client.query(query)
+    df = None
+    try:
+        df = pd.DataFrame(results["gpu_reports"])
+    except Exception as e:
+        return None
