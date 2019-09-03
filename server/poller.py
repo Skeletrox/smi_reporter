@@ -16,7 +16,8 @@ class InfluxPoller(threading.Thread):
         while True:
             try:
                 message, deviceID = pollInflux()
-                updateUser(message, deviceID)
+                if message is not None:
+                    updateUser(message, deviceID)
             except Exception as e:
                 print("Error in polling:",e)
                 print(traceback.format_exc())
@@ -34,7 +35,7 @@ def generateMessage(gpuUsage, appUsage):
     for app, appValues in appUsage.items():
         appLogs = OrderedDict(sorted([(k, v) for k, v in appValues.items()], key= lambda x: x[0]))
         for (key, val) in appLogs.items():
-            currentString = "At {}, app {}  was using {} MiB on the GPU".format(key, app, val["mem"])
+            currentString = "At {}, app {} was using {} MiB on the GPU\n".format(key, app, val["mem"])
             texts.append(currentString)
 
     returnable = "\n".join(texts)
@@ -59,9 +60,9 @@ def pollInflux():
     appUsageDict = {}
     df["time"] = df.index
     df.reset_index(drop=True, inplace=True)
+    deviceID = df.iloc[0].deviceid
     for row in df.itertuples():
         if row.gpu_perc >= 75 or row.mem_perc >= 75:
-            deviceID = row.deviceid
             currTime = row.time.strftime("%m/%d/%Y %H:%M:%S %Z")
             gpuUsageDict[currTime] = {"mem": row.mem_perc, "proc": row.gpu_perc}
             application = row.p_name
@@ -70,6 +71,8 @@ def pollInflux():
             currAppUsageDict[currTime] = {"mem": row.p_memory}
             appUsageDict[application] = currAppUsageDict
     
+    if len(gpuUsageDict) == 0:
+        return None, deviceID
     message = generateMessage(gpuUsageDict, appUsageDict)
     return message, deviceID
 
@@ -81,7 +84,7 @@ def updateUser(message, deviceID):
             chatID = json.loads(dtc.read())[deviceID]
     except Exception as e:
         print("Device not registered yet.")
-        return
+        raise e
     
     botAndUpdate = {}
     with open("./botAndUpdate_{}.bau".format(chatID), "rb") as bau:
@@ -92,12 +95,23 @@ def updateUser(message, deviceID):
     bot.sendMessage(chat_id=chatID, text=message)
 
 
-def pollForGraphs(timerange, deviceID):
+def pollForGraphs(deviceID, timeRange):
+    configData = None
+    with open("./config.json") as config:
+        configData = json.loads(config.read())
+        
+    host = configData["host"]
+    port = configData["port"]
+    database = configData["database"]
     client = DataFrameClient(host=host, port=port, database=database)
-    query = "SELECT gpu_perc, mem_perc FROM gpu_reports WHERE deviceid='{}' AND time > now() - {}".format(deviceID, timerange)
+    query = "SELECT gpu_perc, mem_perc FROM gpu_reports WHERE deviceid='{}' AND time > now() - {}".format(deviceID, timeRange)
     results = client.query(query)
     df = None
     try:
         df = pd.DataFrame(results["gpu_reports"])
     except Exception as e:
         return None
+    needed_df_subset = df[["gpu_perc", "mem_perc"]]
+    needed_df_subset.plot()
+    plt.savefig("./{}.png".format(deviceID))
+    return deviceID

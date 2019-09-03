@@ -3,7 +3,10 @@ from telegram.ext import Updater, CommandHandler
 from telegram import Chat
 import pickle
 import json
-from poller import InfluxPoller
+import re
+from poller import InfluxPoller, pollForGraphs
+
+compiledRange = re.compile(r"\d+[h|m|s|d|w|m|y]")
 
 token = os.getenv("NVIDIA_BOT_TOKEN")
 
@@ -29,10 +32,10 @@ def hello(bot, update):
 
 def linkIDtoChat(bot, update):
     chatID = update.message.chat_id
-    deviceID = update.message.text.replace('/link', '').strip()
+    deviceID = update.message.text.replace("/link", '').strip()
     dtcObj = None
     try:
-        with open('./device_to_chat.json', 'r') as dtc:
+        with open("./device_to_chat.json", "r") as dtc:
             dtcObj = json.loads(dtc.read())
     except Exception:
         dtcObj = {}
@@ -43,14 +46,40 @@ def linkIDtoChat(bot, update):
         dtc.write(json.dumps(dtcObj))
 
     bot.sendMessage(chat_id=chatID, text="Device {} has been linked to this chat!".format(deviceID))
-    
+
+
+
+def queryGraph(bot, update):
+    request = update.message.text
+    parts = request.split(' ')
+    if len(parts) < 3:
+        bot.sendMessage(chat_id=update.message.chat_id, text="Please query as /graph <device_id> <time_range>")
+        return
+
+    deviceID = parts[1]
+    timeRange = parts[2]
+    if compiledRange.match(timeRange) is None:
+        bot.sendMessage(chat_id=update.message.chat_id, text="Please set your time range as <number><d/w/m/y/h/m/s/>, eg. 15d, 12h, etc. You submitted: {}".format(timeRange))
+        return
+    result = None
+    try:
+        result = pollForGraphs(deviceID, timeRange)
+    except Exception as e:
+        bot.sendMessage(chat_id=update.message.chat_id, text="Getting data failed with error: {}".format(str(e)))
+        return
+    if result is None:
+        bot.sendMessage(chat_id=update.message.chat_id, text="No data for the device ID and time range")
+        return
+    bot.send_photo(chat_id=update.message.chat_id, photo=open('./{}.png'.format(deviceID), 'rb'), text="Data for {} in the last {}".format(deviceID, timeRange))
     
 
 hello_handler = CommandHandler("hello", hello)
 link_handler = CommandHandler("link", linkIDtoChat)
+graph_handler = CommandHandler("graph", queryGraph)
 
 dispatcher.add_handler(hello_handler)
 dispatcher.add_handler(link_handler)
+dispatcher.add_handler(graph_handler)
 
 try:
     InfluxPoller().start()
