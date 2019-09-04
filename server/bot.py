@@ -48,6 +48,19 @@ def linkIDtoChat(bot, update):
     bot.sendMessage(chat_id=chatID, text="Device {} has been linked to this chat!".format(deviceID))
 
 
+def help(bot, update):
+    helpString = '''
+    Hi! Welcome to the reporter bot! These are the following commands you can use to run this:
+
+    /hello: Saves your chat to disk so that the bot knows whom to notify when it has to.
+
+    /link <deviceid>: Links a deviceid to this chat. 
+
+    /graph <deviceid> <timerange>: Plots a utilization graph for deviceid over the past timerange amount of time. Timerange has to be in InfluxQL format.
+    '''
+    bot.sendMessage(chat_id=update.message.chat_id, text=helpString)
+
+
 
 def queryGraph(bot, update):
     request = update.message.text
@@ -76,10 +89,13 @@ def queryGraph(bot, update):
 hello_handler = CommandHandler("hello", hello)
 link_handler = CommandHandler("link", linkIDtoChat)
 graph_handler = CommandHandler("graph", queryGraph)
+help_handler = CommandHandler("help", help)
+
 
 dispatcher.add_handler(hello_handler)
 dispatcher.add_handler(link_handler)
 dispatcher.add_handler(graph_handler)
+dispatcher.add_handler(help_handler)
 
 try:
     InfluxPoller().start()
