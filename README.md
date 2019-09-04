@@ -56,8 +56,12 @@ Please use an [influxDB](https://www.influxdata.com/) instance. I am yet to find
 
 ## Where have you tested it?
 
-* This project has been with the client running Linux Mint 19.2 and the server being a Raspberry Pi 3 Model B+ running Raspbian Stretch.
+* This project has been tested with the client running Linux Mint 19.2 and an nVidia GT-840M and the server being a Raspberry Pi 3 Model B+ running Raspbian Stretch.
 
 ## Oops! Something broke!
 
 * Raise an issue! If you can fix it, make a PR! I'll gladly accept improvements!
+
+## Ooh ooh I have an idea I want to implement in this project
+
+* Build your feature and raise a PR by all means!
