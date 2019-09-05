@@ -54,7 +54,11 @@ def pollInflux():
     database = configData["database"]
     client = DataFrameClient(host=host, port=port, database=database)
     results = client.query("SELECT time, deviceid, gpu_perc, mem_perc, memory_total, memory_used, p_id, p_memory, p_name, temperature FROM gpu_reports WHERE time > now() - 30m")
-    df = pd.DataFrame(results["gpu_reports"])
+    df = None
+    try:
+        df = pd.DataFrame(results["gpu_reports"])
+    except Exception as e:
+        return None, None
     deviceID = ""
     gpuUsageDict = {}
     appUsageDict = {}
@@ -105,6 +109,7 @@ def pollForGraphs(deviceID, timeRange):
     database = configData["database"]
     client = DataFrameClient(host=host, port=port, database=database)
     query = "SELECT gpu_perc, mem_perc FROM gpu_reports WHERE deviceid='{}' AND time > now() - {}".format(deviceID, timeRange)
+    client.close()
     results = client.query(query)
     df = None
     try:
@@ -114,4 +119,26 @@ def pollForGraphs(deviceID, timeRange):
     needed_df_subset = df[["gpu_perc", "mem_perc"]]
     needed_df_subset.plot()
     plt.savefig("./{}.png".format(deviceID))
+    return deviceID
+
+
+def pollForTemperature(deviceID, timeRange):
+    configData = None
+    with open("./config.json") as config:
+        configData = json.loads(config.read())
+        
+    host = configData["host"]
+    port = configData["port"]
+    database = configData["database"]
+    client = DataFrameClient(host=host, port=port, database=database)
+    query = "SELECT temperature FROM gpu_reports WHERE deviceid='{}' AND time > now() - {}".format(deviceID, timeRange)
+    client.close()
+    results = client.query(query)
+    df = None
+    try:
+        df = pd.DataFrame(results["gpu_reports"])
+    except Exception as e:
+        return None
+    df.plot()
+    plt.savefig("./{}_temp.png".format(deviceID))
     return deviceID
