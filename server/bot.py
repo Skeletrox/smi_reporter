@@ -4,7 +4,7 @@ from telegram import Chat
 import pickle
 import json
 import re
-from poller import InfluxPoller, pollForGraphs
+from poller import InfluxPoller, pollForGraphs, pollForTemperature
 
 compiledRange = re.compile(r"\d+[h|m|s|d|w|m|y]")
 
@@ -84,18 +84,45 @@ def queryGraph(bot, update):
         bot.sendMessage(chat_id=update.message.chat_id, text="No data for the device ID and time range")
         return
     bot.send_photo(chat_id=update.message.chat_id, photo=open('./{}.png'.format(deviceID), 'rb'), text="Data for {} in the last {}".format(deviceID, timeRange))
+
+
+def queryTemp(bot, update):
+    request = update.message.text
+    parts = request.split(' ')
+    if len(parts) < 3:
+        bot.sendMessage(chat_id=update.message.chat_id, text="Please query as /temp <device_id> <time_range>")
+        return
+
+    deviceID = parts[1]
+    timeRange = parts[2]
+    if compiledRange.match(timeRange) is None:
+        bot.sendMessage(chat_id=update.message.chat_id, text="Please set your time range as <number><d/w/m/y/h/m/s/>, eg. 15d, 12h, etc. You submitted: {}".format(timeRange))
+        return
+    result = None
+    try:
+        result = pollForTemperature(deviceID, timeRange)
+    except Exception as e:
+        bot.sendMessage(chat_id=update.message.chat_id, text="Getting data failed with error: {}".format(str(e)))
+        return
+    if result is None:
+        bot.sendMessage(chat_id=update.message.chat_id, text="No data for the device ID and time range")
+        return
+    bot.send_photo(chat_id=update.message.chat_id, photo=open('./{}_temp.png'.format(deviceID), 'rb'), text="Temperature for {} in the last {}".format(deviceID, timeRange))
     
 
 hello_handler = CommandHandler("hello", hello)
 link_handler = CommandHandler("link", linkIDtoChat)
 graph_handler = CommandHandler("graph", queryGraph)
 help_handler = CommandHandler("help", help)
+temperature_handler = CommandHandler("temp", queryTemp)
 
 
 dispatcher.add_handler(hello_handler)
 dispatcher.add_handler(link_handler)
 dispatcher.add_handler(graph_handler)
 dispatcher.add_handler(help_handler)
+dispatcher.add_handler(temperature_handler)
+
 
 try:
     InfluxPoller().start()
