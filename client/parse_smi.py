@@ -93,6 +93,7 @@ def parse_smi():
         processList.append(currProcDict)
 
     valuedict = {
+        "time": int(time.time())*1000000000,
         "temperature": temp,
         "memory_total": total,
         "memory_used": used,
@@ -100,7 +101,6 @@ def parse_smi():
         "mem_perc": used_mem,
         "processes": processList
     }
-
     writePoints(valuedict)
     logging.info("Points written")
 
