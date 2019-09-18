@@ -3,7 +3,10 @@ from influxdb import InfluxDBClient
 
 
 def getClient(host, port, database):
-    client = InfluxDBClient(host=host, port=port, database=database)
+    try:
+        client = InfluxDBClient(host=host, port=port, database=database, timeout=5)
+    except Exception as e:
+        raise e
     return client
 
 
@@ -25,13 +28,34 @@ def writePoints(body):
 
     if id is None or database is None or host is None or port is None:
         raise Exception("Missing fields in config, please run setup.py again!")
+    client = None
+    try:
+        client = getClient(host, port, database)
+    except Exception as e:
+        print(e)
+        raise e
 
-    client = getClient(host, port, database)
-    writableBodies = []
+    oldData = []
+    try:
+        with open('./queue.json', 'r') as queue:
+            vals = queue.read()
+            readVal = None
+            readVal = json.loads(vals)
+            oldData = readVal["points"]
+    except Exception as e:
+        print(e)
+    finally:
+        with open('./queue.json', 'w') as queue:
+            queue.write(json.dumps({
+                "points": []
+            }))
+
+    writableBodies = oldData
     for p in body["processes"]:
         writableBody = {
             "measurement": "gpu_reports",
             "tags": {
+                "time": body["time"],
                 "deviceid": id,
                 "p_name": p["pname"],
             },
@@ -46,5 +70,23 @@ def writePoints(body):
             }
         }
         writableBodies.append(writableBody)
-    client.write_points(writableBodies)
+    try:
+        client.write_points(writableBodies)
+    except Exception as e:
+        # Write these points to a file, then upload when possible
+        print(e)
+        with open('./queue.json', 'r') as queue:
+            vals = queue.read()
+            readVal = None
+            try:
+                readVal = json.loads(vals)
+                readVal["points"].extend(writableBodies)
+            except Exception as e:
+                print(e)
+                readVal = {
+                    "points": [writableBodies]
+                }
+        with open('./queue.json', 'w') as queue:
+            queue.write(json.dumps(readVal))       
+    
     client.close()
