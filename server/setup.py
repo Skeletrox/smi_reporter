@@ -38,6 +38,9 @@ if len(host) < 1:
 if len(port) < 1:
     port = "8086"
 
+if len(serverPort) < 1:
+    serverPort = "13768"
+
 
 try:
     port = int(port)
@@ -48,8 +51,8 @@ except Exception:
 try:
     serverPort = int(serverPort)
 except Exception:
-    print("[x] Invalid port number, defaulting to 13786")
-    port = 13786
+    print("[x] Invalid port number, defaulting to 13768")
+    serverPort = 13768
 
 if len(database) < 1:
     database = "nvidia_smi"

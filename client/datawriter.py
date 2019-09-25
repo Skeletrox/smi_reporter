@@ -36,9 +36,9 @@ def writePoints(body):
     writableBodies = oldData
     for p in body["processes"]:
         writableBody = {
+            "time": body["time"],
             "measurement": "gpu_reports",
             "tags": {
-                "time": body["time"],
                 "deviceid": id,
                 "p_name": p["pname"],
             },
@@ -54,10 +54,11 @@ def writePoints(body):
         }
         writableBodies.append(writableBody)
     try:
-        response = requests.post("http://{}:{}/telemetry", json=writableBodies)
+        response = requests.post("http://{}:{}/telemetry".format(host, port), json=writableBodies)
         if response.status_code != 200:
-            raise Exception
-    except Exception:
+            raise Exception("Non 200 result code")
+    except Exception as e:
+        print(e)
         # Write these points to a file, then upload when possible
         with open('./queue.json', 'r') as queue:
             vals = queue.read()

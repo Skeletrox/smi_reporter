@@ -3,7 +3,7 @@ import time
 import json
 import traceback
 import pandas as pd
-from influxdb import DataFrameClient
+from influxdb import DataFrameClient, InfluxDBClient
 from collections import OrderedDict
 import datetime
 import pickle
@@ -43,7 +43,7 @@ def generateMessage(gpuUsage, appUsage):
 
 
 
-def getClient():
+def getClient(dataFrame=True):
     configData = None
     with open("./config.json") as config:
         configData = json.loads(config.read())
@@ -51,7 +51,10 @@ def getClient():
     host = configData["host"]
     port = configData["port"]
     database = configData["database"]
-    client = DataFrameClient(host=host, port=port, database=database)
+    if dataFrame:
+        client = DataFrameClient(host=host, port=port, database=database)
+    else:
+        client = InfluxDBClient(host=host, port=port, database=database)
     return client
 
 
@@ -135,9 +138,10 @@ def pollForTemperature(deviceID, timeRange):
 
 
 def writeToInflux(body):
-    client = getClient()
+    client = getClient(dataFrame=False)
     try:
-        client.write_points(body)
+        writable = json.loads(body)
+        client.write_points(writable)
         client.close()
     except Exception as e:
         client.close()
