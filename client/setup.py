@@ -28,7 +28,7 @@ deviceUUID = uuid4()
 # Take inputs for host IP address, and host port
 
 host = input("[+] Enter the IP address of the host (default: localhost): ")
-port = input("[+] Enter the port the server listens on (default: 7000): ")
+port = input("[+] Enter the port the server listens on (default: 13768): ")
 
 # Validate data. TODO: Check for host IP?
 
@@ -36,13 +36,13 @@ if len(host) < 1:
     host = "localhost"
 
 if len(port) < 1:
-    port = "7000"
+    port = "13768"
 
 try:
     port = int(port)
 except Exception:
-    print("[x] Invalid port number, defaulting to 8086")
-    port = 7000
+    print("[x] Invalid port number, defaulting to 13768")
+    port = 13768
 
 
 
