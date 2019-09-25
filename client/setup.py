@@ -25,12 +25,10 @@ except Exception:
 # Give a unique uuid for this client
 deviceUUID = uuid4()
 
-# Take inputs for database name, database port and host
+# Take inputs for host IP address, and host port
 
 host = input("[+] Enter the IP address of the host (default: localhost): ")
-port = input("[+] Enter the port the database listens on (default: 8086): ")
-
-database = input("[+] Enter the name of the database (default: nvidia_smi): ")
+port = input("[+] Enter the port the server listens on (default: 7000): ")
 
 # Validate data. TODO: Check for host IP?
 
@@ -38,23 +36,21 @@ if len(host) < 1:
     host = "localhost"
 
 if len(port) < 1:
-    port = "8086"
+    port = "7000"
 
 try:
     port = int(port)
 except Exception:
     print("[x] Invalid port number, defaulting to 8086")
-    port = 8086
+    port = 7000
 
-if len(database) < 1:
-    database = "nvidia_smi"
+
 
 
 setupdict = {
     "deviceid": str(deviceUUID),
     "host": host,
     "port": port,
-    "database": database
 }
 
 with open('./config.json', 'w') as conf:

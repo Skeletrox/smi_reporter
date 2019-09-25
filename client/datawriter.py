@@ -1,8 +1,6 @@
 import json
 import requests
 
-
-
 def writePoints(body):
     data = None
     try:
@@ -14,18 +12,11 @@ def writePoints(body):
         
     
     id = data.get("deviceid", None)
-    database = data.get("database", None)
     host = data.get("host", None)
     port = data.get("port", None)
 
-    if id is None or database is None or host is None or port is None:
+    if id is None or host is None or port is None:
         raise Exception("Missing fields in config, please run setup.py again!")
-    client = None
-    try:
-        client = getClient(host, port, database)
-    except Exception as e:
-        print(e)
-        raise e
 
     oldData = []
     try:
@@ -63,7 +54,9 @@ def writePoints(body):
         }
         writableBodies.append(writableBody)
     try:
-        client.write_points(writableBodies)
+        response = requests.post("http://{}:{}/telemetry", json=writableBodies)
+        if response.status_code != 200:
+            raise Exception
     except Exception:
         # Write these points to a file, then upload when possible
         with open('./queue.json', 'r') as queue:
@@ -77,6 +70,4 @@ def writePoints(body):
                     "points": [writableBodies]
                 }
         with open('./queue.json', 'w') as queue:
-            queue.write(json.dumps(readVal))       
-    
-    client.close()
+            queue.write(json.dumps(readVal))
