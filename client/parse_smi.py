@@ -9,7 +9,7 @@ from xml.etree import ElementTree as ET
 # Our goal is to parse the XML output of nvidia-smi
 #
 
-NVIDIA_CMD = ["nvidia-smi.exe -q -x"] if system() == "Windows" else ["nvidia-smi -q -x"]
+NVIDIA_CMD = ["powershell.exe", "nvidia-smi.exe -q -x"] if system() == "Windows" else ["nvidia-smi -q -x"]
 
 
 def parseXML(xmlDump):
@@ -83,16 +83,27 @@ def parse_smi():
 
     processList = []
     processes = gpu.find("processes").findall("process_info")
-    for p in processes:
-        pid = int(p.find("pid").text)
-        pname = truncate(p.find("process_name").text, 64)
-        usedMemory = int(p.find("used_memory").text[:-3])
+    if system() == "Windows":
+        pid = 0
+        pname = "N/A"
+        usedMemory = 0
         currProcDict = {
             "pid": pid,
             "pname": pname,
             "memory": usedMemory
         }
         processList.append(currProcDict)
+    else:
+        for p in processes:
+            pid = int(p.find("pid").text)
+            pname = truncate(p.find("process_name").text, 64)
+            usedMemory = int(p.find("used_memory").text[:-3])
+            currProcDict = {
+                "pid": pid,
+                "pname": pname,
+                "memory": usedMemory
+            }
+            processList.append(currProcDict)
 
     valuedict = {
         "time": int(time.time())*1000000000,
