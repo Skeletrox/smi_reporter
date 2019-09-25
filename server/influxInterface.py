@@ -43,8 +43,7 @@ def generateMessage(gpuUsage, appUsage):
 
 
 
-
-def pollInflux():
+def getClient():
     configData = None
     with open("./config.json") as config:
         configData = json.loads(config.read())
@@ -53,6 +52,11 @@ def pollInflux():
     port = configData["port"]
     database = configData["database"]
     client = DataFrameClient(host=host, port=port, database=database)
+    return client
+
+
+def pollInflux():
+    client = getClient()
     results = client.query("SELECT time, deviceid, gpu_perc, mem_perc, memory_total, memory_used, p_id, p_memory, p_name, temperature FROM gpu_reports WHERE time > now() - 30m")
     df = None
     try:
@@ -100,21 +104,14 @@ def updateUser(message, deviceID):
 
 
 def pollForGraphs(deviceID, timeRange):
-    configData = None
-    with open("./config.json") as config:
-        configData = json.loads(config.read())
-        
-    host = configData["host"]
-    port = configData["port"]
-    database = configData["database"]
-    client = DataFrameClient(host=host, port=port, database=database)
+    client = getClient()
     query = "SELECT gpu_perc, mem_perc FROM gpu_reports WHERE deviceid='{}' AND time > now() - {}".format(deviceID, timeRange)
-    client.close()
     results = client.query(query)
+    client.close()
     df = None
     try:
         df = pd.DataFrame(results["gpu_reports"])
-    except Exception as e:
+    except Exception:
         return None
     needed_df_subset = df[["gpu_perc", "mem_perc"]]
     needed_df_subset.plot()
@@ -123,22 +120,25 @@ def pollForGraphs(deviceID, timeRange):
 
 
 def pollForTemperature(deviceID, timeRange):
-    configData = None
-    with open("./config.json") as config:
-        configData = json.loads(config.read())
-        
-    host = configData["host"]
-    port = configData["port"]
-    database = configData["database"]
-    client = DataFrameClient(host=host, port=port, database=database)
+    client = getClient()
     query = "SELECT temperature FROM gpu_reports WHERE deviceid='{}' AND time > now() - {}".format(deviceID, timeRange)
-    client.close()
     results = client.query(query)
+    client.close()
     df = None
     try:
         df = pd.DataFrame(results["gpu_reports"])
-    except Exception as e:
+    except Exception:
         return None
     df.plot()
     plt.savefig("./{}_temp.png".format(deviceID))
     return deviceID
+
+
+def writeToInflux(body):
+    client = getClient()
+    try:
+        client.write_points(body)
+        client.close()
+    except Exception as e:
+        client.close()
+        raise e
