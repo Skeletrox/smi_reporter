@@ -28,6 +28,8 @@ port = input("[+] Enter the port the database listens on (default: 8086): ")
 
 database = input("[+] Enter the name of the database (default: nvidia_smi): ")
 
+serverPort = input("[+] Enter the port this machine listens on (default: 13768): ")
+
 # Validate data. TODO: Check for host IP?
 
 if len(host) < 1:
@@ -36,11 +38,18 @@ if len(host) < 1:
 if len(port) < 1:
     port = "8086"
 
+
 try:
     port = int(port)
 except Exception:
     print("[x] Invalid port number, defaulting to 8086")
     port = 8086
+
+try:
+    serverPort = int(serverPort)
+except Exception:
+    print("[x] Invalid port number, defaulting to 13786")
+    port = 13786
 
 if len(database) < 1:
     database = "nvidia_smi"
@@ -49,7 +58,8 @@ if len(database) < 1:
 setupdict = {
     "host": host,
     "port": port,
-    "database": database
+    "database": database,
+    "server_port": serverPort
 }
 
 with open('./config.json', 'w') as conf:
