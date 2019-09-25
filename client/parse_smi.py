@@ -1,13 +1,15 @@
 import subprocess
 import logging
 import time
-from influxwriter import writePoints
+from traceback import format_exc
+from platform import system
+from datawriter import writePoints
 from xml.etree import ElementTree as ET
 #
 # Our goal is to parse the XML output of nvidia-smi
 #
 
-NVIDIA_CMD = ["nvidia-smi -q -x"]
+NVIDIA_CMD = ["nvidia-smi.exe -q -x"] if system() == "Windows" else ["nvidia-smi -q -x"]
 
 
 def parseXML(xmlDump):
@@ -110,6 +112,6 @@ while True:
         parse_smi()
     except Exception as e:
         print("Error in parsing:",e)
-        print(traceback.format_exc())
+        print(format_exc())
     time.sleep(180)
 
