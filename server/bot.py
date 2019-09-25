@@ -4,7 +4,7 @@ from telegram import Chat
 import pickle
 import json
 import re
-from poller import InfluxPoller, pollForGraphs, pollForTemperature
+from influxInterface import InfluxPoller, pollForGraphs, pollForTemperature
 
 compiledRange = re.compile(r"\d+[h|m|s|d|w|m|y]")
 

@@ -1,15 +1,5 @@
 import json
-from influxdb import InfluxDBClient
-
-
-def getClient(host, port, database):
-    try:
-        client = InfluxDBClient(host=host, port=port, database=database, timeout=5)
-    except Exception as e:
-        raise e
-    return client
-
-
+import requests
 
 def writePoints(body):
     data = None
@@ -22,18 +12,11 @@ def writePoints(body):
         
     
     id = data.get("deviceid", None)
-    database = data.get("database", None)
     host = data.get("host", None)
     port = data.get("port", None)
 
-    if id is None or database is None or host is None or port is None:
+    if id is None or host is None or port is None:
         raise Exception("Missing fields in config, please run setup.py again!")
-    client = None
-    try:
-        client = getClient(host, port, database)
-    except Exception as e:
-        print(e)
-        raise e
 
     oldData = []
     try:
@@ -53,9 +36,9 @@ def writePoints(body):
     writableBodies = oldData
     for p in body["processes"]:
         writableBody = {
+            "time": body["time"],
             "measurement": "gpu_reports",
             "tags": {
-                "time": body["time"],
                 "deviceid": id,
                 "p_name": p["pname"],
             },
@@ -71,22 +54,21 @@ def writePoints(body):
         }
         writableBodies.append(writableBody)
     try:
-        client.write_points(writableBodies)
+        response = requests.post("http://{}:{}/telemetry".format(host, port), json=writableBodies)
+        if response.status_code != 200:
+            raise Exception("Non 200 result code")
     except Exception as e:
-        # Write these points to a file, then upload when possible
         print(e)
+        # Write these points to a file, then upload when possible
         with open('./queue.json', 'r') as queue:
             vals = queue.read()
             readVal = None
             try:
                 readVal = json.loads(vals)
                 readVal["points"].extend(writableBodies)
-            except Exception as e:
-                print(e)
+            except Exception:
                 readVal = {
                     "points": [writableBodies]
                 }
         with open('./queue.json', 'w') as queue:
-            queue.write(json.dumps(readVal))       
-    
-    client.close()
+            queue.write(json.dumps(readVal))
